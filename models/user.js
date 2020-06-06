@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 
+const { ObjectId } = require('mongodb');
 const { extractValidFields } = require('../lib/validation');
 
 
@@ -36,6 +37,8 @@ exports.getUserById = async (id) => {
       .find({ _id: new ObjectId(id) })
       .project({ password: 0 })
       .toArray();
+
+    // add in course depending on role
     return results[0];
   }
 };

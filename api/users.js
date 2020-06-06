@@ -45,17 +45,38 @@ router.post('/login', async (req, res) => {
         });
       } else {
         res.status(401).send({
-          error: "The specified credentials were invalid"
+          error: "The specified credentials were invalid."
         });
       }
     } catch (err) {
       res.status(500).send({
-        error: "An internal server error occurred"
+        error: "An internal server error occurred."
       });
     }
   } else {
     res.status(400).send({
       error: "The request body was either not present or did not contain all of the required fields."
+    });
+  }
+});
+
+router.get('/:id', requireAuthentication, async (req, res, next) => {
+  if (req.user == req.params.id) {
+    try {
+      const user = await getUserById(req.params.id);
+      if (user) {
+        res.status(200).send(user);
+      } else {
+        res.status(404).send("Specific Course `id` not found.");
+      }
+    } catch (err) {
+      res.status(500).send({
+        error: "An internal server error occurred."
+      });
+    }
+  } else  {
+    res.status(403).send({
+      error: "The request was not made by an authenticated User satisfying the authorization criteria."
     });
   }
 });
