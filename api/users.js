@@ -80,3 +80,5 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
     });
   }
 });
+
+module.exports= router;

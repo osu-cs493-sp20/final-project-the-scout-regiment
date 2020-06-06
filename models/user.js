@@ -43,7 +43,7 @@ exports.getUserById = async (id) => {
   }
 };
 
-exports.validateUser = (email, password) => {
+exports.validateUser = async (email, password) => {
   const db = this.getDBReference();
   const collection = db.collection('users');
   const user = (await collection
