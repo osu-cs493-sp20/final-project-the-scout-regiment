@@ -1,11 +1,12 @@
 const router = require('express').Router();
 
 const { validateAgainstSchema } = require('../lib/validation');
-const { requireAuthentication, authRole } = require('../lib/auth');
+const { requireAuthentication, authRole, generateAuthToken } = require('../lib/auth');
+const { getUserById, validateUser, insertNewUser } = require('../models/user');
 
 router.post('/', requireAuthentication, async (req, res) => {
   if (validateAgainstSchema(req.body, UserSchema)) {
-    const user = await getUserDetailsById(parseInt(req.user));
+    const user = await getUserById(parseInt(req.user));
     if (authRole(user.role, req.body.role)) {
       try {
         const id =  await insertNewUser(req.body);
@@ -25,6 +26,36 @@ router.post('/', requireAuthentication, async (req, res) => {
   } else {
     res.status(400).send({
       error: "The request body was either not present or did not contain a valid User object."
+    });
+  }
+});
+
+
+router.post('/login', async (req, res) => {
+  if (req.body && req.body.email && req.body.password) {
+    try {
+      const authenticated = await validateUser(
+        req.body.email,
+        req.body.password
+      );
+      if (authenticated) {
+        const token = generateAuthToken(authenticated.id);
+        res.status(200).send({
+          token: token
+        });
+      } else {
+        res.status(401).send({
+          error: "The specified credentials were invalid"
+        });
+      }
+    } catch (err) {
+      res.status(500).send({
+        error: "An internal server error occurred"
+      });
+    }
+  } else {
+    res.status(400).send({
+      error: "The request body was either not present or did not contain all of the required fields."
     });
   }
 });

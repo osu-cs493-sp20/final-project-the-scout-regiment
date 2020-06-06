@@ -25,3 +25,31 @@ exports.insertNewUser = async function (user) {
   const result = await collection.insertOne(userToInsert);
   return result.insertedId
 }
+
+exports.getUserById = async (id) => {
+  const db = getDBReference();
+  const collection = db.collection('users');
+  if (!ObjectId.isValid(id)) {
+    return null;
+  } else {
+    const results = await collection
+      .find({ _id: new ObjectId(id) })
+      .project({ password: 0 })
+      .toArray();
+    return results[0];
+  }
+};
+
+exports.validateUser = (email, password) => {
+  const db = this.getDBReference();
+  const collection = db.collection('users');
+  const user = (await collection
+    .find({ email: email })
+    .toArray())[0];
+
+  if (user && await bcrypt.compare(password, user.password))  {
+    return user;
+  } else {
+    return false;
+  }
+}
