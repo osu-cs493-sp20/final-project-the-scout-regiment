@@ -23,11 +23,12 @@ exports.CourseSchema = CourseSchema;
  * Executes a DB query to return a single page of courses.  Returns a
  * Promise that resolves to an array containing the fetched page of course.
  */
-async function getCoursesPage(page) {
+async function getCoursesPage(query) {
     const db = getDBReference();
     const collection = db.collection('courses');
     const count = await collection.countDocuments();
 
+    let page = parseInt(query.page) || 1;
     /*
      * Compute last page number and make sure page is within allowed bounds.
      * Compute offset into collection.
@@ -38,7 +39,8 @@ async function getCoursesPage(page) {
     page = page < 1 ? 1 : page;
     const offset = (page - 1) * pageSize;
 
-    const results = await collection.find({})
+    const search = extractValidFields(query, CourseSchema);
+    const results = await collection.find(search)
         .sort({ _id: 1 })
         .skip(offset)
         .limit(pageSize)
@@ -53,3 +55,12 @@ async function getCoursesPage(page) {
     };
 }
 exports.getCoursesPage = getCoursesPage;
+
+async function insertNewCourse(course) {
+    course = extractValidFields(course, CourseSchema);
+    const db = getDBReference();
+    const collection = db.collection('courses');
+    const result = await collection.insertOne(course);
+    return result.insertedId;
+}
+exports.insertNewCourse = insertNewCourse;
