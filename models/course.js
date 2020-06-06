@@ -64,3 +64,51 @@ async function insertNewCourse(course) {
     return result.insertedId;
 }
 exports.insertNewCourse = insertNewCourse;
+
+async function getCourseById(id) {
+    const db = getDBReference();
+    const collection = db.collection('courses');
+    if (!ObjectId.isValid(id)) {
+        return null;
+    } else {
+        const results = await collection
+            .find({ _id: new ObjectId(id) })
+            .toArray();
+        return results[0];
+    }
+}
+exports.getCourseById = getCourseById;
+
+async function getCourseDetailsById(id) {
+    /*
+     * Execute three sequential queries to get all of the info about the
+     * specified business, including its photos.
+     */
+    const course = await getCourseById(id);
+    // if (business) {
+    //     business.photos = await getPhotosByBusinessId(id);
+    //     for (let i = 0; i < business.photos.length; i++) {
+    //         let curr_photo = business.photos[i];
+    //         business.photos[i] = await getPhotoResponseBody(curr_photo, false);
+    //     }
+    // }
+    return course;
+}
+exports.getCourseDetailsById = getCourseDetailsById;
+
+async function updateBusinessById(id, course) {
+    const db = getDBReference();
+    const collection = db.collection('courses');
+
+    if (!ObjectId.isValid(id)) {
+        return null;
+    } else {
+        course = extractValidFields(course, CourseSchema);
+        const results = await collection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: course }
+        );
+        return results.matchedCount > 0;
+    }
+}
+exports.updateBusinessById = updateBusinessById;

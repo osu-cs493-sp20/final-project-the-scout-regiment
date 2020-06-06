@@ -5,7 +5,10 @@ const { validateAgainstSchema } = require('../lib/validation');
 const {
     CourseSchema,
     getCoursesPage,
-    insertNewCourse
+    insertNewCourse,
+    getCourseById,
+    getCourseDetailsById,
+    updateBusinessById
 } = require('../models/course');
 
 router.get('/', async (req, res) => {
@@ -56,6 +59,61 @@ router.post('/', async (req, res) => {
            error: "Request body is not a valid business object."
        });
    }
+});
+
+router.put('/:id', async (req, res, next) => {
+    // try {
+    //     const course = await getCourseById(parseInt(req.params.id));
+    //     if (!req.admin) {
+    //         if (course && req.user !== course.instructorId) {
+    //             res.status(403).send({
+    //                 error: "Unauthorized to access the specified resource"
+    //             });
+    //             return;
+    //         }
+    //     }
+    // } catch (err) {
+    //     console.error(err);
+    //     res.status(500).send({
+    //         error: "Unable to locate course. Please try again later."
+    //     });
+    //     return;
+    // }
+    if (validateAgainstSchema(req.body, CourseSchema)){
+        try {
+            const id = parseInt(req.params.id);
+            const existingCourse = await getCourseById(id);
+            if (existingCourse) {
+                if (req.body.instructorId === existingCourse.instructorId) {
+                    const updateSuccessful = await updateBusinessById(id, req.body);
+                    if (updateSuccessful) {
+                        res.status(200).send({
+                            links: {
+                                course: `/courses/${id}`
+                            }
+                        });
+                    } else {
+                        next();
+                    }
+                } else {
+                    res.status(403).send({
+                        error: "Updated course must have the same instructorId"
+                    });
+                }
+            } else {
+                next();
+            }
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({
+                error: "Unable to course photo.  Please try again later."
+            });
+        }
+    } else {
+        res.status(400).send({
+            error: "Request body is not a valid course object."
+        });
+    }
 });
 
 module.exports = router;
