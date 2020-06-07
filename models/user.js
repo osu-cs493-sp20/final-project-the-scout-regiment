@@ -39,8 +39,21 @@ exports.getUserById = async (id) => {
       .project({ password: 0 })
       .toArray();
 
-    // add in course depending on role
-    return results[0];
+    const user = results[0];
+    let courses = [];
+
+    if (user.role === 'instructor') {
+      courses = await collection
+        .find({ instructorId: user._id })
+        .toArray();
+    } else {
+      
+    }
+
+    return {
+      ...user,
+      courses: courses
+    };
   }
 };
 
