@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 
 const { ObjectId } = require('mongodb');
 const { extractValidFields } = require('../lib/validation');
+const { getDBReference } = require('../lib/mongo');
 
 
 const UserSchema = {
@@ -10,7 +11,7 @@ const UserSchema = {
   password: { required: true },
   role: { required: true}
 };
-exports.UserSchema = this.UserSchema;
+exports.UserSchema = UserSchema;
 
 
 exports.insertNewUser = async function (user) {
@@ -43,14 +44,15 @@ exports.getUserById = async (id) => {
   }
 };
 
-exports.validateUser = (email, password) => {
-  const db = this.getDBReference();
+exports.validateUser = async (email, password) => {
+  const db = getDBReference();
   const collection = db.collection('users');
   const user = (await collection
     .find({ email: email })
-    .toArray())[0];
-
-  if (user && await bcrypt.compare(password, user.password))  {
+    .toArray()
+    )[0];
+    
+  if (user && await bcrypt.compare(password, user.password)) {
     return user;
   } else {
     return false;

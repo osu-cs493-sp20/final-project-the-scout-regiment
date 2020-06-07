@@ -2,12 +2,12 @@ const router = require('express').Router();
 
 const { validateAgainstSchema } = require('../lib/validation');
 const { requireAuthentication, authRole, generateAuthToken } = require('../lib/auth');
-const { getUserById, validateUser, insertNewUser } = require('../models/user');
+const { getUserById, validateUser, insertNewUser, UserSchema } = require('../models/user');
 
 router.post('/', requireAuthentication, async (req, res) => {
   if (validateAgainstSchema(req.body, UserSchema)) {
-    const user = await getUserById(parseInt(req.user));
-    if (authRole(user.role, req.body.role)) {
+    const user = await getUserById(req.user);
+    if (user && authRole(user.role, req.body.role)) {
       try {
         const id =  await insertNewUser(req.body);
         res.status(201).send({
@@ -15,7 +15,8 @@ router.post('/', requireAuthentication, async (req, res) => {
         });
       } catch (err) {
         res.status(500).send({
-          error: "Error inserting new user. Try again later."
+          message: "Error inserting new user. Try again later.",
+          error: err
         });
       }
     } else {
@@ -39,7 +40,7 @@ router.post('/login', async (req, res) => {
         req.body.password
       );
       if (authenticated) {
-        const token = generateAuthToken(authenticated.id);
+        const token = generateAuthToken(authenticated._id);
         res.status(200).send({
           token: token
         });
@@ -50,7 +51,8 @@ router.post('/login', async (req, res) => {
       }
     } catch (err) {
       res.status(500).send({
-        error: "An internal server error occurred."
+        message: "An internal server error occurred.",
+        error: err
       });
     }
   } else {
@@ -71,7 +73,8 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
       }
     } catch (err) {
       res.status(500).send({
-        error: "An internal server error occurred."
+        message: "An internal server error occurred.",
+        error: err
       });
     }
   } else  {
@@ -80,3 +83,5 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
     });
   }
 });
+
+module.exports = router;
