@@ -61,6 +61,53 @@ router.post('/', async (req, res) => {
    }
 });
 
+router.get('/courses/:id/', async (req, res, next) => {
+    // try {
+    //     const course = await getCourseById(parseInt(req.params.id));
+    //     if (!req.admin) {
+    //         if (course && req.user !== course.instructorId) {
+    //             res.status(403).send({
+    //                 error: "Unauthorized to access the specified resource"
+    //             });
+    //             return;
+    //         }
+    //     }
+    // } catch (err) {
+    //     console.error(err);
+    //     res.status(500).send({
+    //         error: "Unable to locate course. Please try again later."
+    //     });
+    //     return;
+    // }
+    try {
+        const id = parseInt(req.params.id);
+        const existingCourse = await getCourseDetailsById(id);
+        if (existingCourse) {
+            if (req.body.instructorId === existingCourse.instructorId) {
+                const roster = await getCourseDetailsById(id);
+                if (roster) {
+                    res.status(200)
+                        .set('Content-Type', 'text/csv')
+                        .send(roster);
+                } else {
+                    next();
+                }
+            } else {
+                res.status(403).send({
+                    error: "Course must have the same instructorId"
+                });
+            }
+        } else {
+            next();
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({
+            error: "Unable to locate course.  Please try again later."
+        });
+    }
+});
+
 router.put('/:id', async (req, res, next) => {
     // try {
     //     const course = await getCourseById(parseInt(req.params.id));
@@ -106,7 +153,7 @@ router.put('/:id', async (req, res, next) => {
         } catch (err) {
             console.error(err);
             res.status(500).send({
-                error: "Unable to course photo.  Please try again later."
+                error: "Unable to locate course.  Please try again later."
             });
         }
     } else {
