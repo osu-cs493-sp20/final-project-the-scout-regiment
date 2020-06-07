@@ -6,9 +6,9 @@ const {
     CourseSchema,
     getCoursesPage,
     insertNewCourse,
-    getCourseById,
     getCourseDetailsById,
-    updateBusinessById
+    updateCourseById,
+    removeCourseById
 } = require('../models/course');
 
 router.get('/', async (req, res) => {
@@ -82,10 +82,10 @@ router.put('/:id', async (req, res, next) => {
     if (validateAgainstSchema(req.body, CourseSchema)){
         try {
             const id = parseInt(req.params.id);
-            const existingCourse = await getCourseById(id);
+            const existingCourse = await getCourseDetailsById(id);
             if (existingCourse) {
                 if (req.body.instructorId === existingCourse.instructorId) {
-                    const updateSuccessful = await updateBusinessById(id, req.body);
+                    const updateSuccessful = await updateCourseById(id, req.body);
                     if (updateSuccessful) {
                         res.status(200).send({
                             links: {
@@ -112,6 +112,28 @@ router.put('/:id', async (req, res, next) => {
     } else {
         res.status(400).send({
             error: "Request body is not a valid course object."
+        });
+    }
+});
+
+router.delete('/:id', async (req, res, next) => {
+    if (!req.admin) {
+        res.status(403).send({
+            error: "Unauthorized to access the specified resource"
+        });
+        return;
+    }
+    try {
+        const deleteSuccessful = await removeCourseById(parseInt(req.params.id));
+        if (deleteSuccessful) {
+            res.status(204).end();
+        } else {
+            next();
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({
+            error: "Unable to delete course.  Please try again later."
         });
     }
 });

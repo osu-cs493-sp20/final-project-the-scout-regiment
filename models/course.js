@@ -96,7 +96,7 @@ async function getCourseDetailsById(id) {
 }
 exports.getCourseDetailsById = getCourseDetailsById;
 
-async function updateBusinessById(id, course) {
+async function updateCourseById(id, course) {
     const db = getDBReference();
     const collection = db.collection('courses');
 
@@ -111,4 +111,19 @@ async function updateBusinessById(id, course) {
         return results.matchedCount > 0;
     }
 }
-exports.updateBusinessById = updateBusinessById;
+exports.updateCourseById = updateCourseById;
+
+async function removeCourseById(id) {
+    const db = getDBReference();
+    const collection = db.collection('courses');
+
+    if (!ObjectId.isValid(id)) {
+        return null;
+    } else {
+        const results = await collection.deleteOne(
+            { _id: new ObjectId(id) }
+        );
+        return results.deletedCount > 0;
+    }
+}
+exports.removeCourseById = removeCourseById;
