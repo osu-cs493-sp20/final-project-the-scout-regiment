@@ -6,3 +6,4 @@ router.use('/courses', require('./courses'));
 // router.use('/photos', require('./photos'));
 
 module.exports = router;
+
