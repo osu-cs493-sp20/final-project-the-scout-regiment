@@ -78,7 +78,5 @@ exports.insertNewSubmissionById = async function (id, sumbission) {
     
     subToInsert.assignmentId = id;
     const result = await collection.insertOne(subToInsert);
-    return 
-
-    }
+    return result.insertedId
 }
