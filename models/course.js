@@ -7,6 +7,8 @@ const { ObjectId } = require('mongodb');
 const { getDBReference } = require('../lib/mongo');
 const { extractValidFields } = require('../lib/validation');
 
+const { getUserById } = require("./user");
+
 /*
  * Schema describing required/optional fields of a business object.
  */
@@ -44,6 +46,7 @@ exports.getCoursesPage = async function (query) {
         .sort({ _id: 1 })
         .skip(offset)
         .limit(pageSize)
+        .project({students: 0, assignments: 0})
         .toArray();
 
     return {
@@ -85,18 +88,21 @@ exports.getCourseById = async function (id, includeStudents, includeAssignments)
 
 exports.getCourseRosterById = async function (id) {
     let csv = "";
-    const course = await getCourseById(id, true, false);
+    const course = await exports.getCourseById(id, true, false);
     if (course) {
         for (let i = 0; i < course.students.length; i++) {
             course.students[i] = await getUserById(course.students[i]);
+            delete course.students[i].role;
         }
         const students = course.students;
-        const header = Object.keys(students[0]);
-        const replacer = (key, value) => value === null ? '' : value
+        if (students.length > 0) {
+            const header = Object.keys(students[0]);
+            const replacer = (key, value) => value === null ? '' : value
 
-        csv = students.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)));
-        csv.unshift(header.join(','));
-        csv = csv.join('\r\n');
+            csv = students.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)));
+            csv.unshift(header.join(','));
+            csv = csv.join('\r\n');
+        }
     }
     return csv;
 }
@@ -127,7 +133,7 @@ exports.updateCourseStudentsById = async function (id, students) {
     } else {
         if (students.add) {
             students.add = students.add.map(x => new ObjectId(x));
-            const results = await collection.update(
+            const results = await collection.updateOne(
                 { _id: new ObjectId(id) },
                 { $addToSet: {
                         students: {
@@ -140,7 +146,7 @@ exports.updateCourseStudentsById = async function (id, students) {
         }
         if (students.remove) {
             students.remove = students.remove.map(x => new ObjectId(x));
-            const results = await collection.update(
+            const results = await collection.updateOne(
                 { _id: new ObjectId(id) },
                 { $pull: {
                         students: {

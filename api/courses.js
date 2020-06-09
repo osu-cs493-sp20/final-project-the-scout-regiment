@@ -1,6 +1,9 @@
 const router = require('express').Router();
 
 const { validateAgainstSchema } = require('../lib/validation');
+const { requireAuthentication } = require("../lib/auth");
+const { getUserById } = require('../models/user');
+
 
 const {
     CourseSchema,
@@ -12,6 +15,47 @@ const {
     updateCourseStudentsById,
     removeCourseById
 } = require('../models/course');
+
+async function validateAdmin(userId, res) {
+    try {
+        const user = await getUserById(userId);
+        if (user && user.role !== 'admin') {
+            res.status(403).send({
+                error: "Unauthorized to access the specified resource"
+            });
+            return 0;
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(400).send({
+            error: "Unable to locate authorized user. Please try again later."
+        });
+        return 0;
+    }
+    return 1;
+}
+
+async function validateRole(userId, courseId, res) {
+    try {
+        const course = await getCourseById(courseId, false, false);
+        const user = await getUserById(userId);
+        if (user && user.role !== 'admin') {
+            if (course && userId !== course.instructorId) {
+                res.status(403).send({
+                    error: "Unauthorized to access the specified resource"
+                });
+                return 0;
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({
+            error: "Unable to locate course. Please try again later."
+        });
+        return 0;
+    }
+    return 1;
+}
 
 router.get('/', async (req, res) => {
     try {
@@ -33,13 +77,10 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
-   // if (!req.admin) {
-   //     res.status(403).send({
-   //         error: "Unauthorized to access the specified resource"
-   //     });
-   //     return;
-   // }
+router.post('/', requireAuthentication, async (req, res) => {
+    if (!(await validateAdmin(req.user, res))) {
+        return;
+    }
 
    if (validateAgainstSchema(req.body, CourseSchema)) {
        try {
@@ -65,8 +106,7 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res, next) => {
     try {
-        const id = parseInt(req.params.id);
-        const course = await getCourseById(id, false, false);
+        const course = await getCourseById(req.params.id, false, false);
         if (course) {
             res.status(200).send({
                 course: course
@@ -82,33 +122,20 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
-router.get('/:id/roster', async (req, res, next) => {
-    // try {
-    //     const course = await getCourseById(parseInt(req.params.id), false, false);
-    //     if (!req.admin) {
-    //         if (course && req.user !== course.instructorId) {
-    //             res.status(403).send({
-    //                 error: "Unauthorized to access the specified resource"
-    //             });
-    //             return;
-    //         }
-    //     }
-    // } catch (err) {
-    //     console.error(err);
-    //     res.status(500).send({
-    //         error: "Unable to locate course. Please try again later."
-    //     });
-    //     return;
-    // }
+router.get('/:id/roster', requireAuthentication, async (req, res, next) => {
+    if (!(await validateRole(req.user, req.params.id, res))) {
+        return;
+    }
     try {
-        const id = parseInt(req.params.id);
-        const csv = await getCourseRosterById(id);
+        const csv = await getCourseRosterById(req.params.id);
         if (csv) {
             res.status(200)
                 .set('Content-Type', 'text/csv')
                 .send(csv);
         } else {
-            next();
+            res.status(400).send({
+                error: "Unable to locate any students for the course."
+            });
         }
     } catch (err) {
         console.error(err);
@@ -118,27 +145,9 @@ router.get('/:id/roster', async (req, res, next) => {
     }
 });
 
-router.get('/:id/students', async (req, res, next) => {
-    // try {
-    //     const course = await getCourseById(parseInt(req.params.id), false, false);
-    //     if (!req.admin) {
-    //         if (course && req.user !== course.instructorId) {
-    //             res.status(403).send({
-    //                 error: "Unauthorized to access the specified resource"
-    //             });
-    //             return;
-    //         }
-    //     }
-    // } catch (err) {
-    //     console.error(err);
-    //     res.status(500).send({
-    //         error: "Unable to locate course. Please try again later."
-    //     });
-    //     return;
-    // }
+router.get('/:id/assignments', async (req, res, next) => {
     try {
-        const id = parseInt(req.params.id);
-        const course = await getCourseById(id, false, true);
+        const course = await getCourseById(req.params.id, false, true);
         if (course) {
             res.status(200).send({
                 assignments: course.assignments
@@ -154,32 +163,40 @@ router.get('/:id/students', async (req, res, next) => {
     }
 });
 
-router.post('/:id/students', async (req, res, next) => {
-    // try {
-    //     const course = await getCourseById(parseInt(req.params.id), false, false);
-    //     if (!req.admin) {
-    //         if (course && req.user !== course.instructorId) {
-    //             res.status(403).send({
-    //                 error: "Unauthorized to access the specified resource"
-    //             });
-    //             return;
-    //         }
-    //     }
-    // } catch (err) {
-    //     console.error(err);
-    //     res.status(500).send({
-    //         error: "Unable to locate course. Please try again later."
-    //     });
-    //     return;
-    // }
+router.get('/:id/students', requireAuthentication, async (req, res, next) => {
+    if (!(await validateRole(req.user, req.params.id, res))) {
+        return;
+    }
+
+    try {
+        const course = await getCourseById(req.params.id, true, false);
+        if (course) {
+            res.status(200).send({
+                students: course.students
+            });
+        } else {
+            next();
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send({
+            error: "Unable to locate course.  Please try again later."
+        });
+    }
+});
+
+router.post('/:id/students', requireAuthentication, async (req, res, next) => {
+    if (!(await validateRole(req.user, req.params.id, res))) {
+        return;
+    }
+
     if (req.body && (req.body.add || req.body.remove)) {
         try {
-            const id = parseInt(req.params.id);
-            const updateSuccessful = await updateCourseStudentsById(id, req.body);
+            const updateSuccessful = await updateCourseStudentsById(req.params.id, req.body);
             if (updateSuccessful) {
                 res.status(200).send({
                     links: {
-                        course: `/courses/${id}`
+                        course: `/courses/${req.params.id}`
                     }
                 });
             } else {
@@ -198,45 +215,19 @@ router.post('/:id/students', async (req, res, next) => {
     }
 });
 
-router.patch('/:id', async (req, res, next) => {
-    // try {
-    //     const course = await getCourseById(parseInt(req.params.id), false, false);
-    //     if (!req.admin) {
-    //         if (course && req.user !== course.instructorId) {
-    //             res.status(403).send({
-    //                 error: "Unauthorized to access the specified resource"
-    //             });
-    //             return;
-    //         }
-    //     }
-    // } catch (err) {
-    //     console.error(err);
-    //     res.status(500).send({
-    //         error: "Unable to locate course. Please try again later."
-    //     });
-    //     return;
-    // }
-    if (validateAgainstSchema(req.body, CourseSchema)){
+router.patch('/:id', requireAuthentication, async (req, res, next) => {
+    if (!(await validateRole(req.user, req.params.id, res))) {
+        return;
+    }
+
         try {
-            const id = parseInt(req.params.id);
-            const existingCourse = await getCourseById(id, false, false);
-            if (existingCourse) {
-                if (req.body.instructorId === existingCourse.instructorId) {
-                    const updateSuccessful = await updateCourseById(id, req.body);
-                    if (updateSuccessful) {
-                        res.status(200).send({
-                            links: {
-                                course: `/courses/${id}`
-                            }
-                        });
-                    } else {
-                        next();
+            const updateSuccessful = await updateCourseById(req.params.id, req.body);
+            if (updateSuccessful) {
+                res.status(200).send({
+                    links: {
+                        course: `/courses/${req.params.id}`
                     }
-                } else {
-                    res.status(403).send({
-                        error: "Updated course must have the same instructorId"
-                    });
-                }
+                });
             } else {
                 next();
             }
@@ -246,22 +237,14 @@ router.patch('/:id', async (req, res, next) => {
                 error: "Unable to locate course.  Please try again later."
             });
         }
-    } else {
-        res.status(400).send({
-            error: "Request body is not a valid course object."
-        });
-    }
 });
 
-router.delete('/:id', async (req, res, next) => {
-    // if (!req.admin) {
-    //     res.status(403).send({
-    //         error: "Unauthorized to access the specified resource"
-    //     });
-    //     return;
-    // }
+router.delete('/:id', requireAuthentication, async (req, res, next) => {
+    if (!(await validateAdmin(req.user, res))) {
+        return;
+    }
     try {
-        const deleteSuccessful = await removeCourseById(parseInt(req.params.id));
+        const deleteSuccessful = await removeCourseById(req.params.id);
         if (deleteSuccessful) {
             res.status(204).end();
         } else {
