@@ -46,14 +46,14 @@ exports.getUserById = async (id) => {
       courses = await collection
         .find({ instructorId: user._id })
         .toArray();
-    } else {
-      
-    }
 
-    return {
-      ...user,
-      courses: courses
-    };
+      return {
+        ...user,
+        courses: courses
+      };
+    } else {
+      return user;
+    }
   }
 };
 
