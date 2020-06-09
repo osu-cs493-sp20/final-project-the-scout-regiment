@@ -23,7 +23,7 @@ exports.CourseSchema = CourseSchema;
  * Executes a DB query to return a single page of courses.  Returns a
  * Promise that resolves to an array containing the fetched page of course.
  */
-async function getCoursesPage(query) {
+exports.getCoursesPage = async function (query) {
     const db = getDBReference();
     const collection = db.collection('courses');
     const count = await collection.countDocuments();
@@ -54,49 +54,54 @@ async function getCoursesPage(query) {
         count: count
     };
 }
-exports.getCoursesPage = getCoursesPage;
 
-async function insertNewCourse(course) {
+exports.insertNewCourse = async function (course) {
     course = extractValidFields(course, CourseSchema);
+    course.students = [];
+    course.assignments = [];
     const db = getDBReference();
     const collection = db.collection('courses');
     const result = await collection.insertOne(course);
     return result.insertedId;
 }
-exports.insertNewCourse = insertNewCourse;
 
-async function getCourseById(id) {
+exports.getCourseById = async function (id, includeStudents, includeAssignments) {
     const db = getDBReference();
     const collection = db.collection('courses');
     if (!ObjectId.isValid(id)) {
         return null;
     } else {
+        let projection = {};
+        if (!includeStudents) { projection.students = 0; }
+        if (!includeAssignments) { projection.assignments = 0; }
         const results = await collection
             .find({ _id: new ObjectId(id) })
+            .project(projection)
             .toArray();
         return results[0];
     }
 }
-exports.getCourseById = getCourseById;
 
-async function getCourseDetailsById(id) {
-    /*
-     * Execute three sequential queries to get all of the info about the
-     * specified business, including its photos.
-     */
-    const course = await getCourseById(id);
-    // if (business) {
-    //     business.photos = await getPhotosByBusinessId(id);
-    //     for (let i = 0; i < business.photos.length; i++) {
-    //         let curr_photo = business.photos[i];
-    //         business.photos[i] = await getPhotoResponseBody(curr_photo, false);
-    //     }
-    // }
-    return course;
+
+exports.getCourseRosterById = async function (id) {
+    let csv = "";
+    const course = await getCourseById(id, true, false);
+    if (course) {
+        for (let i = 0; i < course.students.length; i++) {
+            course.students[i] = await getUserById(course.students[i]);
+        }
+        const students = course.students;
+        const header = Object.keys(students[0]);
+        const replacer = (key, value) => value === null ? '' : value
+
+        csv = students.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)));
+        csv.unshift(header.join(','));
+        csv = csv.join('\r\n');
+    }
+    return csv;
 }
-exports.getCourseDetailsById = getCourseDetailsById;
 
-async function updateCourseById(id, course) {
+exports.updateCourseById = async function (id, course) {
     const db = getDBReference();
     const collection = db.collection('courses');
 
@@ -111,9 +116,8 @@ async function updateCourseById(id, course) {
         return results.matchedCount > 0;
     }
 }
-exports.updateCourseById = updateCourseById;
 
-async function updateCourseStudentsById(id, students) {
+exports.updateCourseStudentsById = async function (id, students) {
     const db = getDBReference();
     const collection = db.collection('courses');
 
@@ -152,9 +156,8 @@ async function updateCourseStudentsById(id, students) {
         return matchedCount > 0;
     }
 }
-exports.updateCourseStudentsById = updateCourseStudentsById;
 
-async function removeCourseById(id) {
+exports.removeCourseById = async function (id) {
     const db = getDBReference();
     const collection = db.collection('courses');
 
@@ -167,4 +170,3 @@ async function removeCourseById(id) {
         return results.deletedCount > 0;
     }
 }
-exports.removeCourseById = removeCourseById;

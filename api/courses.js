@@ -6,7 +6,8 @@ const {
     CourseSchema,
     getCoursesPage,
     insertNewCourse,
-    getCourseDetailsById,
+    getCourseById,
+    getCourseRosterById,
     updateCourseById,
     updateCourseStudentsById,
     removeCourseById
@@ -65,7 +66,7 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res, next) => {
     try {
         const id = parseInt(req.params.id);
-        const course = await getCourseDetailsById(id);
+        const course = await getCourseById(id, false, false);
         if (course) {
             res.status(200).send({
                 course: course
@@ -83,7 +84,7 @@ router.get('/:id', async (req, res, next) => {
 
 router.get('/:id/roster', async (req, res, next) => {
     // try {
-    //     const course = await getCourseById(parseInt(req.params.id));
+    //     const course = await getCourseById(parseInt(req.params.id), false, false);
     //     if (!req.admin) {
     //         if (course && req.user !== course.instructorId) {
     //             res.status(403).send({
@@ -101,11 +102,11 @@ router.get('/:id/roster', async (req, res, next) => {
     // }
     try {
         const id = parseInt(req.params.id);
-        const course = await getCourseDetailsById(id);
-        if (course) {
+        const csv = await getCourseRosterById(id);
+        if (csv) {
             res.status(200)
                 .set('Content-Type', 'text/csv')
-                .send(roster);
+                .send(csv);
         } else {
             next();
         }
@@ -119,7 +120,7 @@ router.get('/:id/roster', async (req, res, next) => {
 
 router.get('/:id/students', async (req, res, next) => {
     // try {
-    //     const course = await getCourseById(parseInt(req.params.id));
+    //     const course = await getCourseById(parseInt(req.params.id), false, false);
     //     if (!req.admin) {
     //         if (course && req.user !== course.instructorId) {
     //             res.status(403).send({
@@ -137,10 +138,10 @@ router.get('/:id/students', async (req, res, next) => {
     // }
     try {
         const id = parseInt(req.params.id);
-        const roster = await getCourseDetailsById(id);
-        if (roster) {
+        const course = await getCourseById(id, false, true);
+        if (course) {
             res.status(200).send({
-                roster: roster
+                assignments: course.assignments
             });
         } else {
             next();
@@ -155,7 +156,7 @@ router.get('/:id/students', async (req, res, next) => {
 
 router.post('/:id/students', async (req, res, next) => {
     // try {
-    //     const course = await getCourseById(parseInt(req.params.id));
+    //     const course = await getCourseById(parseInt(req.params.id), false, false);
     //     if (!req.admin) {
     //         if (course && req.user !== course.instructorId) {
     //             res.status(403).send({
@@ -174,7 +175,7 @@ router.post('/:id/students', async (req, res, next) => {
     if (req.body && (req.body.add || req.body.remove)) {
         try {
             const id = parseInt(req.params.id);
-            const updateSuccessful = await updateCourseById(id, req.body);
+            const updateSuccessful = await updateCourseStudentsById(id, req.body);
             if (updateSuccessful) {
                 res.status(200).send({
                     links: {
@@ -197,9 +198,9 @@ router.post('/:id/students', async (req, res, next) => {
     }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.patch('/:id', async (req, res, next) => {
     // try {
-    //     const course = await getCourseById(parseInt(req.params.id));
+    //     const course = await getCourseById(parseInt(req.params.id), false, false);
     //     if (!req.admin) {
     //         if (course && req.user !== course.instructorId) {
     //             res.status(403).send({
@@ -218,7 +219,7 @@ router.put('/:id', async (req, res, next) => {
     if (validateAgainstSchema(req.body, CourseSchema)){
         try {
             const id = parseInt(req.params.id);
-            const existingCourse = await getCourseDetailsById(id);
+            const existingCourse = await getCourseById(id, false, false);
             if (existingCourse) {
                 if (req.body.instructorId === existingCourse.instructorId) {
                     const updateSuccessful = await updateCourseById(id, req.body);
