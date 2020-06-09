@@ -113,6 +113,47 @@ async function updateCourseById(id, course) {
 }
 exports.updateCourseById = updateCourseById;
 
+async function updateCourseStudentsById(id, students) {
+    const db = getDBReference();
+    const collection = db.collection('courses');
+
+    let matchedCount = 0;
+    if (!ObjectId.isValid(id)) {
+        return null;
+    } else {
+        if (students.add) {
+            students.add = students.add.map(x => new ObjectId(x));
+            const results = await collection.update(
+                { _id: new ObjectId(id) },
+                { $addToSet: {
+                        students: {
+                            $each: students.add
+                        }
+                    }
+                }
+            );
+            matchedCount += results.matchedCount;
+        }
+        if (students.remove) {
+            students.remove = students.remove.map(x => new ObjectId(x));
+            const results = await collection.update(
+                { _id: new ObjectId(id) },
+                { $pull: {
+                        students: {
+                            $in: students.remove
+                        }
+                    }
+                },
+                {multi: true}
+            );
+            matchedCount += results.matchedCount;
+        }
+
+        return matchedCount > 0;
+    }
+}
+exports.updateCourseStudentsById = updateCourseStudentsById;
+
 async function removeCourseById(id) {
     const db = getDBReference();
     const collection = db.collection('courses');
