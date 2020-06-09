@@ -30,7 +30,7 @@ app.use('*', function (req, res, next) {
 });
 
 connectToDB(async () => {
-  await connectToRabbitMQ('photos');
+  // await connectToRabbitMQ('photos');
   app.listen(port, () => {
     console.log("== Server is running on port", port);
   });
