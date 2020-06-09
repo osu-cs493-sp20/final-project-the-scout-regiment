@@ -23,6 +23,11 @@ exports.insertNewAssign = async function (assign) {
     const db = getDBReference();
     const cellection = db.collection('assignments');
     const result = await collection.insertOne(assignToInsert);
+    const course_collection = db.collection('courses');
+    await course_collection.updateOne(
+            { _id: new ObjectId(assignToInsert.courseId) },
+            { $addToSet: { assignments: new ObjectId(result.insertedId) }}
+    );
     return result.insertedId
 }
 
