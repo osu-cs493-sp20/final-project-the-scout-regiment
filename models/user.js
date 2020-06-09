@@ -46,19 +46,19 @@ exports.getUserById = async (id) => {
       courses = await collection
         .find({ instructorId: user._id })
         .toArray();
-    } else {
-      
-    }
 
-    return {
-      ...user,
-      courses: courses
-    };
+      return {
+        ...user,
+        courses: courses
+      };
+    } else {
+      return user;
+    }
   }
 };
 
 exports.validateUser = async (email, password) => {
-  const db = this.getDBReference();
+  const db = getDBReference();
   const collection = db.collection('users');
   const user = (await collection
     .find({ email: email })
