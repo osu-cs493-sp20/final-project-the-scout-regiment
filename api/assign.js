@@ -14,7 +14,8 @@ const { AssignmentSchema,
     removeAssignById,
     insertNewSubmissionById,
     removeUploadedSubmission,
-    getSubmissionPage} = require('../models/assign');
+    getSubmissionPage,
+    getSubmissionDownloadStreamById } = require('../models/assign');
 
 const fileTypes = {
     "application/pdf": "pdf",
@@ -145,7 +146,7 @@ router.get('/:id/submissions', async (req, res, next) => {
             error: err
         })
     }
-})
+});
 
 router.post('/:id/submissions', requireAuthentication, upload.single('file'), async (req, res, next) => {
     if (!(await validateStudent(req.user, req.params.id, res))) {
@@ -178,6 +179,21 @@ router.post('/:id/submissions', requireAuthentication, upload.single('file'), as
             error: "The request body was either not present or did not contain a valid Submission object."
         })
     }
+});
+
+router.get('/media/submission/:id', async (req, res, next) => {
+    getSubmissionDownloadStreamById(req.params.id)
+        .on('file', (file) => {
+            res.status(200).type(file.metadata.contentType);
+        })
+        .on('error', (err) => {
+            if (err.code === 'ENOENT') {
+                next();
+            } else {
+                next(err);
+            }
+        })
+        .pipe(res);
 })
 
 module.exports = router;
