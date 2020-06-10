@@ -625,7 +625,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "req.params.id",
+													"value": "<string>",
 													"description": "(Required) Unique ID of a Course.  Exact type/format will depend on your implementation but will likely be either an integer or a string.\n"
 												}
 											]
@@ -1895,8 +1895,29 @@
 											}
 										],
 										"body": {
-											"mode": "raw",
-											"raw": "{\n    \"assignmentId\": \"<integer>\",\n    \"studentId\": \"<integer>\",\n    \"timestamp\": \"<dateTime>\",\n    \"file\": \"<string>\"\n}"
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "assignmentId",
+													"value": "",
+													"type": "text"
+												},
+												{
+													"key": "studentId",
+													"value": "",
+													"type": "text"
+												},
+												{
+													"key": "timestamp",
+													"value": "",
+													"type": "text"
+												},
+												{
+													"key": "file",
+													"type": "file",
+													"src": []
+												}
+											]
 										},
 										"url": {
 											"raw": "{{baseUrl}}/assignments/:id/submissions",
@@ -2104,12 +2125,12 @@
 												{
 													"description": "Assignment ID",
 													"key": "id",
-													"value": ""
+													"value": "<string>"
 												},
 												{
 													"description": "Submission ID",
 													"key": "sid",
-													"value": ""
+													"value": "<string>"
 												}
 											]
 										},
