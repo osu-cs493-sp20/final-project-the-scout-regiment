@@ -63,7 +63,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/:id', requireAuthentication, async (req, res, next) => {
-  if (req.user == req.params.id) {
+  if (req.user === req.params.id) {
     try {
       const user = await getUserById(req.params.id);
       if (user) {
