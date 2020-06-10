@@ -7,7 +7,7 @@ const { getUserById, validateUser, insertNewUser, UserSchema } = require('../mod
 router.post('/', requireAuthentication, async (req, res) => {
   if (validateAgainstSchema(req.body, UserSchema)) {
     const user = await getUserById(req.user);
-    if (user && authRole(user.role, req.body.role)) {
+    if ((user && user.role === 'admin') ||  (user && user.role === 'instructor' && req.body.role === 'student')) {
       try {
         const id =  await insertNewUser(req.body);
         res.status(201).send({

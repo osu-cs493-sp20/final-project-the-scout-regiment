@@ -60,11 +60,7 @@ router.post('/', requireAuthentication, async (req, res) => {
     }
 });
 
-router.get('/:id', requireAuthentication, async (req, res, next) => {
-    if (!(await validateRole(req.user, req.body.courseId, res))) {
-        return;
-    }
-
+router.get('/:id', async (req, res, next) => {
     try {
         const id = req.params.id;
         const assign = await getAssignById(id);
@@ -85,7 +81,7 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
 })
 
 router.patch('/:id', requireAuthentication, async (req, res, next) => {
-    if (!(await validateRole(req.user, req.body.courseId, res))) {
+    if (!(await validateSubmission(req.user, req.params.id, res))) {
         return;
     }
 
@@ -117,7 +113,7 @@ router.patch('/:id', requireAuthentication, async (req, res, next) => {
 })
 
 router.delete('/:id', requireAuthentication, async (req, res, next) => {
-    if (!(await validateRole(req.user, req.body.courseId, res))) {
+    if (!(await validateSubmission(req.user, req.params.id, res))) {
         return;
     }
 
