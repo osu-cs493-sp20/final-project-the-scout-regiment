@@ -1,5 +1,6 @@
 const { ObjectId } = require('mongodb')
 const { extractValidFields } = require('../lib/validation');
+const { getDBReference } = require("../lib/mongo");
 
 const AssignmentSchema = {
     courseId: { required: true },
@@ -21,7 +22,7 @@ exports.insertNewAssign = async function (assign) {
     const assignToInsert = extractValidFields(assign, AssignmentSchema);
 
     const db = getDBReference();
-    const cellection = db.collection('assignments');
+    const collection = db.collection('assignments');
     const result = await collection.insertOne(assignToInsert);
     const course_collection = db.collection('courses');
     await course_collection.updateOne(
@@ -46,7 +47,7 @@ exports.getAssignById = async (id) => {
     }
 }
 
-exports.updateAssignById = async function (id, course) {
+exports.updateAssignById = async function (id, assign) {
     const db = getDBReference();
     const collection = db.collection('assignments');
 

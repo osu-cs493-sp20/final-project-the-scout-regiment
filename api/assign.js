@@ -1,7 +1,7 @@
 const router = require('express').Router();
 
 const { validateAgainstSchema } = require('../lib/validation');
-const { requireAuthentication, authRole, generateAuthToken } = require('../lib/auth');
+const { requireAuthentication } = require('../lib/auth');
 const { AssignmentSchema, SubmissionSchema, insertNewAssign, getAssignById, updateAssignById, removeAssignById, insertNewSubmissionById } = require('../models/assign');
 
 router.post('/', requireAuthentication, async (req, res) => {
@@ -29,7 +29,7 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
     try {
         const id = parseInt(req.params.id);
         const assign = await getAssignById(id);
-        if (course) {
+        if (assign) {
             res.status(200).send({
                 assign: assign
             });
@@ -66,7 +66,7 @@ router.patch('/:id', async (req, res, next) => {
             }
         } catch (err) {
             res.status(500).send({
-                error: "An internal server error occurred.",
+                msg: "An internal server error occurred.",
                 error: err
             });
         }
@@ -85,7 +85,7 @@ router.delete('/:id', async (req, res, next) => {
         }
     } catch (err) {
         res.status(500).send({
-            error: "An internal server error occurred.",
+            msg: "An internal server error occurred.",
             error: err
         })
     }
@@ -106,7 +106,7 @@ router.get('/:id/submissions', async (req, res, next) => {
         }
     } catch (err) {
         res.status(500).send({
-            error: "An internal server error occurred.",
+            msg: "An internal server error occurred.",
             error: err
         })
     }
@@ -116,7 +116,7 @@ router.post('/:id/submissions', async (req, res, next) => {
     if (validateAgainstSchema(req.body, SubmissionSchema)) {
         try {
             const id = await insertNewSubmissionById(req.body);
-            res.status(201).sned({
+            res.status(201).send({
                 id: id
             });
         } catch (err) {
