@@ -30,7 +30,7 @@ exports.insertNewUser = async function (user) {
 
 exports.getUserById = async (id) => {
   const db = getDBReference();
-  const collection = db.collection('users');
+  let collection = db.collection('users');
   if (!ObjectId.isValid(id)) {
     return null;
   } else {
@@ -43,13 +43,25 @@ exports.getUserById = async (id) => {
     let courses = [];
 
     if (user.role === 'instructor') {
+      collection = db.collection('courses');
       courses = await collection
-        .find({ instructorId: user._id })
+        .find({ instructorId: user._id.toString() })
+        .project({subject: 0, number: 0, term: 0, instructorId: 0, students: 0, assignments: 0})
         .toArray();
 
       return {
         ...user,
         courses: courses
+      };
+    } else if (user.role === 'student') {
+      collection = db.collection('courses');
+      courses = await collection
+        .find({ students: new ObjectId(user._id) })
+        .project({subject: 0, number: 0, term: 0, instructorId: 0, students: 0, assignments: 0})
+        .toArray();
+      return {
+        ...user,
+        enrolled_courses: courses
       };
     } else {
       return user;
