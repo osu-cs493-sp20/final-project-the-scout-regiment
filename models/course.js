@@ -85,6 +85,22 @@ exports.getCourseById = async function (id, includeStudents, includeAssignments)
     }
 }
 
+exports.getCourseByEnrolledStudentId = async function (courseId, studentId) {
+    const db = getDBReference();
+    const collection = db.collection('courses');
+    if (!ObjectId.isValid(courseId)) {
+        return null;
+    } else {
+        const results = await collection
+            .find({
+                _id: new ObjectId(courseId),
+                students: new ObjectId(studentId)
+            })
+            .toArray();
+        return results[0];
+    }
+}
+
 
 exports.getCourseRosterById = async function (id) {
     let csv = "";

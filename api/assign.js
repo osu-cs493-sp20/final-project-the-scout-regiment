@@ -1,12 +1,46 @@
 const router = require('express').Router();
+const multer = require("multer");
+const crypto = require('crypto');
 
 const { validateAgainstSchema } = require('../lib/validation');
 const { requireAuthentication } = require('../lib/auth');
-const { AssignmentSchema, SubmissionSchema, insertNewAssign, getAssignById, updateAssignById, removeAssignById, insertNewSubmissionById } = require('../models/assign');
+const { validateRole, validateStudent } = require("../lib/auth");
+
+const { AssignmentSchema,
+    SubmissionSchema,
+    insertNewAssign,
+    getAssignById,
+    updateAssignById,
+    removeAssignById,
+    insertNewSubmissionById,
+    removeUploadedSubmission,
+    getSubmissionPage} = require('../models/assign');
+
+const fileTypes = {
+    "application/pdf": "pdf",
+    "text/plain": "txt",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
+}
+
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: `${__dirname}/uploads`,
+        filename: (req, file, callback) => {
+            const filename = crypto.pseudoRandomBytes(16).toString('hex');
+            const extension = fileTypes[file.mimetype];
+            callback(null, `${filename}.${extension}`);
+        }
+    }),
+    fileFilter: (req, file, callback) => {
+        callback(null, !!fileTypes[file.mimetype]);
+    }
+});
 
 router.post('/', requireAuthentication, async (req, res) => {
     if(validateAgainstSchema(req.body, AssignmentSchema)) {
-        //TODO: Validate the user is authorized
+        if (!(await validateRole(req.user, req.body.courseId, res))) {
+            return;
+        }
         try {
             const id = await insertNewAssign(req.body);
             res.status(201).send({
@@ -26,8 +60,12 @@ router.post('/', requireAuthentication, async (req, res) => {
 });
 
 router.get('/:id', requireAuthentication, async (req, res, next) => {
+    if (!(await validateRole(req.user, req.body.courseId, res))) {
+        return;
+    }
+
     try {
-        const id = parseInt(req.params.id);
+        const id = req.params.id;
         const assign = await getAssignById(id);
         if (assign) {
             res.status(200).send({
@@ -48,7 +86,7 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
 router.patch('/:id', async (req, res, next) => {
     if (validateAgainstSchema(req.body, AssignmentSchema)){
         try {
-            const id = parseInt(req.params.id);
+            const id = req.params.id;
             const existingAssign = await getAssignById(id);
             if(existingAssign) {
                 const updateSuccessful = await updateAssignById(id, req.body);
@@ -75,7 +113,7 @@ router.patch('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
     try {
-        const deleteSuccessful = await removeAssignById(parseInt(req.params.id));
+        const deleteSuccessful = await removeAssignById(req.params.id);
         if (deleteSuccessful) {
             res.status(204).send("Success");
         } else {
@@ -93,12 +131,9 @@ router.delete('/:id', async (req, res, next) => {
 
 router.get('/:id/submissions', async (req, res, next) => {
     try {
-        const id = parseInt(req.params.id);
-        const assign = await getAssignById(id);
-        if (assign) {
-            res.status(200).send({
-                submissions: assign.submissions
-            });
+        const submission = await getSubmissionPage(req.query.page, req.params.id, req.query.studentId);
+        if (submission) {
+            res.status(200).send(submission);
         } else {
             res.status(404).send({
                 error: "Specified Assignment `id` not found."
@@ -112,10 +147,23 @@ router.get('/:id/submissions', async (req, res, next) => {
     }
 })
 
-router.post('/:id/submissions', async (req, res, next) => {
+router.post('/:id/submissions', requireAuthentication, upload.single('file'), async (req, res, next) => {
+    if (!(await validateStudent(req.user, req.params.id, res))) {
+        return;
+    }
+
     if (validateAgainstSchema(req.body, SubmissionSchema)) {
+        const file = {
+            contentType: req.file.mimetype,
+            filename: req.file.filename,
+            path: req.file.path,
+            assignmentId: req.body.assignmentId,
+            studentId: req.body.studentId,
+            timestamp: req.body.timestamp
+        }
         try {
-            const id = await insertNewSubmissionById(req.body);
+            const id = await insertNewSubmissionById(file);
+            await removeUploadedSubmission(req.file);
             res.status(201).send({
                 id: id
             });
