@@ -109,6 +109,7 @@ exports.getCourseRosterById = async function (id) {
         for (let i = 0; i < course.students.length; i++) {
             course.students[i] = await getUserById(course.students[i]);
             delete course.students[i].role;
+            delete course.students[i].enrolled_courses;
         }
         const students = course.students;
         if (students.length > 0) {
