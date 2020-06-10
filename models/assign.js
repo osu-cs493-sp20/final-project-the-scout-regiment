@@ -107,8 +107,10 @@ exports.getSubmissionPage = async function (p, aid, sid) {
     const offset = (page - 1) * pageSize;
 
     const search = {
-        "metadata.assignmentId": new ObjectId(aid),
-        "metadata.studentId": new ObjectId(sid)
+        "metadata.assignmentId": new ObjectId(aid)
+    }
+    if (sid) {
+        search["metadata.studentId"] = new ObjectId(sid)
     }
 
     const results = await bucket.find(search)
