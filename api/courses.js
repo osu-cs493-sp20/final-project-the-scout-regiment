@@ -1,8 +1,7 @@
 const router = require('express').Router();
 
 const { validateAgainstSchema } = require('../lib/validation');
-const { requireAuthentication } = require("../lib/auth");
-const { getUserById } = require('../models/user');
+const { requireAuthentication, validateRole, validateAdmin } = require("../lib/auth");
 
 
 const {
@@ -15,47 +14,6 @@ const {
     updateCourseStudentsById,
     removeCourseById
 } = require('../models/course');
-
-async function validateAdmin(userId, res) {
-    try {
-        const user = await getUserById(userId);
-        if (user && user.role !== 'admin') {
-            res.status(403).send({
-                error: "Unauthorized to access the specified resource"
-            });
-            return 0;
-        }
-    } catch (err) {
-        console.error(err);
-        res.status(400).send({
-            error: "Unable to locate authorized user. Please try again later."
-        });
-        return 0;
-    }
-    return 1;
-}
-
-async function validateRole(userId, courseId, res) {
-    try {
-        const course = await getCourseById(courseId, false, false);
-        const user = await getUserById(userId);
-        if (user && user.role !== 'admin') {
-            if (course && userId !== course.instructorId) {
-                res.status(403).send({
-                    error: "Unauthorized to access the specified resource"
-                });
-                return 0;
-            }
-        }
-    } catch (err) {
-        console.error(err);
-        res.status(500).send({
-            error: "Unable to locate course. Please try again later."
-        });
-        return 0;
-    }
-    return 1;
-}
 
 router.get('/', async (req, res) => {
     try {
