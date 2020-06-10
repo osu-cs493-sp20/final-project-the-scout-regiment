@@ -4,7 +4,7 @@ const crypto = require('crypto');
 
 const { validateAgainstSchema } = require('../lib/validation');
 const { requireAuthentication } = require('../lib/auth');
-const { validateRole, validateStudent } = require("../lib/auth");
+const { validateRole, validateStudent, validateSubmission } = require("../lib/auth");
 
 const { AssignmentSchema,
     SubmissionSchema,
@@ -84,7 +84,11 @@ router.get('/:id', requireAuthentication, async (req, res, next) => {
     }
 })
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requireAuthentication, async (req, res, next) => {
+    if (!(await validateRole(req.user, req.body.courseId, res))) {
+        return;
+    }
+
     if (validateAgainstSchema(req.body, AssignmentSchema)){
         try {
             const id = req.params.id;
@@ -112,7 +116,11 @@ router.patch('/:id', async (req, res, next) => {
     }
 })
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireAuthentication, async (req, res, next) => {
+    if (!(await validateRole(req.user, req.body.courseId, res))) {
+        return;
+    }
+
     try {
         const deleteSuccessful = await removeAssignById(req.params.id);
         if (deleteSuccessful) {
@@ -130,7 +138,10 @@ router.delete('/:id', async (req, res, next) => {
     }
 });
 
-router.get('/:id/submissions', async (req, res, next) => {
+router.get('/:id/submissions', requireAuthentication, async (req, res, next) => {
+    if (!(await validateSubmission(req.user, req.params.id, res))) {
+        return;
+    }
     try {
         const submission = await getSubmissionPage(req.query.page, req.params.id, req.query.studentId);
         if (submission) {
@@ -181,8 +192,11 @@ router.post('/:id/submissions', requireAuthentication, upload.single('file'), as
     }
 });
 
-router.get('/media/submission/:id', async (req, res, next) => {
-    getSubmissionDownloadStreamById(req.params.id)
+router.get('/:id/media/submission/:sid', requireAuthentication, async (req, res, next) => {
+    if (!(await validateSubmission(req.user, req.params.id, res))) {
+        return;
+    }
+    getSubmissionDownloadStreamById(req.params.sid)
         .on('file', (file) => {
             res.status(200).type(file.metadata.contentType);
         })
